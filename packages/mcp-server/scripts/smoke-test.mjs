@@ -30,7 +30,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const PKG_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const EXPECTED_TOOLS = 13;
+const EXPECTED_TOOLS = 14;
 // The catalogue size comes from the data package the server bundles, never a
 // hand-typed number (185 went stale the day Part 6 shipped).
 const { PRINCIPLE_COUNT: MIN_PRINCIPLES, loadSmells } = await import('@uxuiprinciples/principles-data');
@@ -99,6 +99,20 @@ const fakeApi = http.createServer((req, res) => {
           interface_type: 'form', overall_score: 72, band: 'fair',
           findings: [{ id: 'finding-1', principle: { code: 'F.1.1.02', slug: 'cognitive-load', title: 'Cognitive Load', part: 'part-1' }, severity: 'warning', message: `echo: ${parsed.description.slice(0, 20)}`, remediation: 'fix it', business_impact: null, smell_id: 'overloaded-screen' }],
           smells_detected: ['overloaded-screen'], strengths: [], priority_fixes: ['finding-1'], audit_depth: parsed.depth ?? 'full',
+        },
+        meta: { tier: 'pro' },
+      });
+    }
+    if (req.method === 'POST' && url.pathname === '/api/v1/check') {
+      const parsed = JSON.parse(body || '{}');
+      const consequential = (parsed.actions ?? []).filter((a) => a.consequential).map((a) => a.label);
+      const confirmed = (parsed.states_implemented ?? []).includes('confirmation');
+      return send(200, {
+        success: true,
+        data: {
+          verdict: confirmed ? 'pass' : 'fail', applicable: 1, passed: confirmed ? 1 : 0, failed: confirmed ? 0 : 1,
+          rules: [{ id: 'confirm-consequential', name: 'Confirmation before consequential actions', status: confirmed ? 'pass' : 'fail', rule: 'echo', required_because: `the screen has a consequential action (${consequential.join(', ')})`, satisfied_by: ['confirmation'], principle: { code: 'C.1.4.01', slug: 'error-prevention', title: 'Error Prevention', url: 'https://uxuiprinciples.com/en/principles/error-prevention' }, citations: [{ author: 'Jakob Nielsen', title: '10 Usability Heuristics for User Interface Design', year: 1994 }] }],
+          summary_markdown: `## Requirements check\n\nflow=${parsed.flow ?? 'none'} locale=${parsed.locale}`,
         },
         meta: { tier: 'pro' },
       });
@@ -231,6 +245,11 @@ function cleanup() {
   if (!audit.isError || !/PRO_REQUIRED|UXUI_API_KEY/.test(audit.content?.[0]?.text ?? '')) fail(`free audit_interface should refuse with the key hint: ${audit.content?.[0]?.text?.slice(0, 160)}`);
   const shortAudit = await s.call('audit_interface', { description: 'too short' });
   if (!shortAudit.isError) fail('audit_interface with a short description should fail validation');
+  const check = await s.call('check_requirements', { flow: 'settings', actions: [{ label: 'Delete account', consequential: true }] });
+  if (!check.isError || !/PRO_REQUIRED|UXUI_API_KEY/.test(check.content?.[0]?.text ?? '')) fail(`free check_requirements should refuse with the key hint: ${check.content?.[0]?.text?.slice(0, 160)}`);
+  if (!/generate_checklist/.test(check.content?.[0]?.text ?? '')) fail('free check_requirements should point at generate_checklist');
+  const badState = await s.call('check_requirements', { states_implemented: ['skeleton'] });
+  if (!badState.isError || !/states_implemented/.test(badState.content?.[0]?.text ?? '')) fail('check_requirements with an unknown state should fail validation');
 
   // part filter by name must work in search_principles (not only by "part-N" id).
   const byName = await s.payload('search_principles', { part: 'Foundations', locale: 'en' });
@@ -271,6 +290,15 @@ function cleanup() {
   const audit = await s.payload('audit_interface', { description: 'A signup form with twelve required fields and no inline validation.', depth: 'quick', context: 'web' });
   if (!audit.success || audit.tier !== 'pro' || audit.audit?.findings?.length !== 1 || audit.audit.audit_depth !== 'quick') fail(`pro audit_interface: ${JSON.stringify(audit).slice(0, 200)}`);
 
+  const failing = await s.payload('check_requirements', { flow: 'settings', components: ['profile form'], actions: [{ label: 'Delete account', consequential: true }], locale: 'es' });
+  if (!failing.success || failing.tier !== 'pro' || failing.check?.verdict !== 'fail' || failing.check.rules?.[0]?.status !== 'fail') fail(`pro check_requirements (fail): ${JSON.stringify(failing).slice(0, 200)}`);
+  if (!/Delete account/.test(failing.check.rules[0].required_because) || !failing.check.rules[0].citations?.[0]?.author) fail('pro check_requirements lost the reason or the citation');
+  const passing = await s.payload('check_requirements', { flow: 'settings', actions: [{ label: 'Delete account', consequential: true }], states_implemented: ['confirmation', 'undo'] });
+  if (!passing.success || passing.check?.verdict !== 'pass') fail(`pro check_requirements (pass): ${JSON.stringify(passing).slice(0, 200)}`);
+  const checkReq = apiRequests.filter((r) => r.path === '/api/v1/check');
+  const sentBody = JSON.parse(checkReq[0]?.body || '{}');
+  if (checkReq.length !== 2 || sentBody.locale !== 'es' || sentBody.flow !== 'settings' || !Array.isArray(sentBody.states_implemented)) fail(`check_requirements request body: ${checkReq[0]?.body}`);
+
   // An API miss degrades to the bundled answer with proError, not to an error.
   const degraded = await s.payload('get_principle', { slug: 'fitts-law' });
   if (!degraded.success || degraded.tier !== 'pro') fail('pro get_principle on a known slug failed');
@@ -281,7 +309,7 @@ function cleanup() {
   const bad = apiRequests.filter((r) => r.auth !== `Bearer ${FAKE_KEY}` || !/^uxui-mcp\//.test(r.ua ?? ''));
   if (bad.length) fail(`pro requests without the Bearer key or the uxui-mcp user agent: ${JSON.stringify(bad[0])}`);
   const paths = apiRequests.map((r) => `${r.method} ${r.path}`);
-  if (!paths.includes('GET /api/v1/principles') || !paths.includes('POST /api/v1/audit')) fail(`pro run did not hit the expected routes: ${paths.join(', ')}`);
+  if (!paths.includes('GET /api/v1/principles') || !paths.includes('POST /api/v1/audit') || !paths.includes('POST /api/v1/check')) fail(`pro run did not hit the expected routes: ${paths.join(', ')}`);
   const principleReq = apiRequests.find((r) => r.path === '/api/v1/principles');
   if (principleReq.query.include_content !== 'true' || principleReq.query.locale !== 'es') fail(`pro principle request query: ${JSON.stringify(principleReq.query)}`);
   console.log(`smoke-test pro mode OK: body, prompts and audit from the API, ${apiRequests.length} requests, all with Bearer key and uxui-mcp UA`);

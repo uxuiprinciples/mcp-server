@@ -50,6 +50,7 @@ import {
   getFlowPrinciplesTool
 } from './tools/flows.js';
 import { auditInterfaceTool, AUDIT_MAX_CHARS, AUDIT_MIN_CHARS } from './tools/audit.js';
+import { checkRequirementsTool, CHECK_STATES, type CheckInput } from './tools/check.js';
 import { API_KEY_ENV, isProMode } from './api-client.js';
 
 // Server info. SERVER_VERSION is injected at build time from package.json via
@@ -76,13 +77,20 @@ const SERVER_INSTRUCTIONS = [
   'All tools are read-only. get_principle carries the citations behind each principle.',
   PRO_MODE
     ? `Pro mode is on (${API_KEY_ENV} is set): get_principle returns the full guide body,`
-    : `Free mode: the full guide bodies, the 600+ AI prompts and audit_interface need`,
+    : `Free mode: the full guide bodies, the 600+ AI prompts, audit_interface and`,
   PRO_MODE
-    ? 'get_principle_prompts returns the AI prompts, and audit_interface audits a described'
-    : `${API_KEY_ENV} set to a Principles Library key (uxuiprinciples.com/en/developers).`,
+    ? 'get_principle_prompts returns the AI prompts, audit_interface audits a described'
+    : `check_requirements need ${API_KEY_ENV} set to a Principles Library key`,
   PRO_MODE
-    ? 'screen through the uxuiprinciples.com API. Everything else stays offline.'
-    : 'Everything else runs offline from the bundled dataset.',
+    ? 'screen and check_requirements verifies a screen you built against the eight'
+    : '(uxuiprinciples.com/en/developers). Everything else runs offline from the',
+  PRO_MODE
+    ? 'required-state rules, both through the uxuiprinciples.com API. Everything else stays offline.'
+    : 'bundled dataset.',
+  '',
+  'After generating or changing a screen, call check_requirements with the flow, the',
+  'components, the actions (flag the consequential and automated ones) and the states',
+  'you implemented; fix every rule it reports as fail before you finish.',
 ].join('\n');
 
 // Create MCP server
@@ -383,6 +391,48 @@ const TOOLS = [
       },
       required: ['description']
     }
+  },
+  {
+    name: 'check_requirements',
+    title: 'Check a screen against the required-state rules',
+    description: `Check a screen you built or designed against eight experience requirements: confirmation before consequential actions, error state, empty state, loading state, undo or edit, sources on AI output, recovery after an AI error, consent before automation. Describe the screen as data (flow, components, actions with flags, states implemented) and get pass, fail or not_applicable per rule, each with the principle it comes from and its citations, plus a markdown summary. Call it after generating or changing a screen and fix every fail. Pro mode only (${API_KEY_ENV} set); without a key use generate_checklist for the unevaluated checklist.`,
+    annotations: PRO_AWARE,
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        flow: {
+          type: 'string',
+          description: `The flow the screen belongs to. One of: ${FLOW_IDS}. Other values are accepted and match no flow rule.`
+        },
+        components: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'What is on the screen, one item per component, in plain words (e.g., "search input", "results table", "AI summary panel"). Words such as form, table, list, search, chart, AI, chat or summary decide which rules apply.'
+        },
+        actions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              label: { type: 'string', description: 'What the action does (e.g., "Delete project").' },
+              consequential: { type: 'boolean', description: 'True when it deletes, sends, pays, publishes or changes something the user cannot trivially get back.' },
+              automated: { type: 'boolean', description: 'True when it runs on the user\'s behalf, in the background, or uses their data to train or personalize.' }
+            },
+            required: ['label']
+          },
+          description: 'The actions the screen offers, with their flags.'
+        },
+        states_implemented: {
+          type: 'array',
+          items: { type: 'string', enum: [...CHECK_STATES] },
+          description: 'The states the implementation has: loading, empty, error, success, confirmation, undo, edit, sources, recovery, consent. Only list what is built.'
+        },
+        locale: {
+          ...LOCALE_PARAM,
+          description: 'Language of the verdicts and the summary: "en" or "es". Defaults to "en".'
+        }
+      }
+    }
   }
 ];
 
@@ -428,6 +478,22 @@ const TOOL_SCHEMAS: Record<string, z.ZodType> = {
     locale: localeSchema,
     context: z.enum(['figma', 'web', 'mobile', 'email']).optional(),
     depth: z.enum(['quick', 'full']).optional(),
+  }),
+  check_requirements: z.object({
+    flow: z.string().min(1).max(60).optional(),
+    components: z.array(z.string().min(1).max(80)).max(60).optional(),
+    actions: z
+      .array(
+        z.object({
+          label: z.string().min(1).max(120),
+          consequential: z.boolean().optional(),
+          automated: z.boolean().optional(),
+        })
+      )
+      .max(60)
+      .optional(),
+    states_implemented: z.array(z.enum(CHECK_STATES)).max(CHECK_STATES.length).optional(),
+    locale: localeSchema,
   }),
 };
 
@@ -551,6 +617,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           args?.context as 'figma' | 'web' | 'mobile' | 'email' | undefined,
           args?.depth as 'quick' | 'full' | undefined
         );
+        break;
+
+      case 'check_requirements':
+        result = await checkRequirementsTool((args ?? {}) as CheckInput);
         break;
 
       default:

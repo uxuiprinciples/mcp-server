@@ -1,8 +1,8 @@
 {
   "name": "@uxuiprinciples/mcp-server",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "mcpName": "io.github.joselhurtado/uxui-principles",
-  "description": "MCP server for UX/UI Principles - 195 research-backed principles with citations, 12 UX smells, 12 flow checklists, and a pro mode (Principles Library API key) that adds full guides, AI prompts and interface audits. For Claude Code, Claude Desktop, Cursor, VS Code and Windsurf.",
+  "description": "MCP server for UX/UI Principles - 195 research-backed principles with citations, 12 UX smells, 12 flow checklists, and a pro mode (Principles Library API key) that adds full guides, AI prompts, interface audits and required-state checks. For Claude Code, Claude Desktop, Cursor, VS Code and Windsurf.",
   "publishConfig": {
     "access": "public"
   },

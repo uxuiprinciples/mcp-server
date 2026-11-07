@@ -1,20 +1,20 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.joselhurtado/uxui-principles",
-  "description": "195 UX/UI principles with citations, 12 UX smells and 12 flow checklists for AI agents, EN and ES.",
+  "description": "195 UX/UI principles with citations, 12 UX smells, 12 flow checklists, 8 required rules, EN/ES.",
   "repository": {
     "url": "https://github.com/uxuiprinciples/mcp-server",
     "source": "github",
     "subfolder": "packages/mcp-server"
   },
   "websiteUrl": "https://uxuiprinciples.com/en/docs/mcp",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@uxuiprinciples/mcp-server",
-      "version": "1.2.1",
+      "version": "1.3.0",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
@@ -22,7 +22,7 @@
       "environmentVariables": [
         {
           "name": "UXUI_API_KEY",
-          "description": "Optional. Principles Library API key from uxuiprinciples.com/account. Unlocks full guide bodies, AI prompts and audit_interface. Without it the server runs offline on the bundled dataset.",
+          "description": "Optional. Principles Library API key from uxuiprinciples.com/account. Unlocks full guide bodies, AI prompts, audit_interface and check_requirements. Without it the server runs offline on the bundled dataset.",
           "isRequired": false,
           "isSecret": true,
           "format": "string"

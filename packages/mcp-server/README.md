@@ -92,15 +92,16 @@ Point the client at the `uxui-mcp` binary instead of `npx`. Re-run the install t
 
 ## Pro mode (Principles Library key)
 
-The [Principles Library](https://uxuiprinciples.com/en/developers) ($59/year) includes a REST API key. Give it to the server as the `UXUI_API_KEY` environment variable and three tools change:
+The [Principles Library](https://uxuiprinciples.com/en/developers) ($59/year) includes a REST API key. Give it to the server as the `UXUI_API_KEY` environment variable and four tools change:
 
 | Tool | Free mode | Pro mode |
 |------|-----------|----------|
 | `get_principle` | Metadata, summary, citations, link | The same plus the full guide body in `content` |
 | `get_principle_prompts` | Link to the guide | The principle's AI prompts |
 | `audit_interface` | Refuses with the key hint | Findings mapped to principles and smells, score, priority fixes |
+| `check_requirements` | Refuses with the key hint | Pass or fail per required-state rule, each with its principle and citations |
 
-Everything else keeps running offline. If the API is unreachable, `get_principle` and `get_principle_prompts` fall back to the free answer and report the failure in `proError`; `audit_interface` returns the error code.
+Everything else keeps running offline. If the API is unreachable, `get_principle` and `get_principle_prompts` fall back to the free answer and report the failure in `proError`; `audit_interface` and `check_requirements` return the error code.
 
 ```json
 {
@@ -150,6 +151,7 @@ For Claude Code: `claude mcp add uxui-principles -e UXUI_API_KEY=uxui_live_... -
 | Tool | Description |
 |------|-------------|
 | `audit_interface` | Audit a described screen (20 to 5,000 characters): findings with severity, remediation and business impact, score, interface type, strengths and the three priority fixes. Needs `UXUI_API_KEY` |
+| `check_requirements` | Check a screen given as data (flow, components, actions with `consequential` and `automated` flags, states implemented) against eight required-state rules: confirmation before consequential actions, error, empty and loading states, undo or edit, sources on AI output, recovery after an AI error, consent before automation. Pass, fail or not_applicable per rule with the principle and its citations, plus a markdown summary. Needs `UXUI_API_KEY` |
 
 ## Usage examples
 
@@ -192,6 +194,15 @@ You: Audit this checkout: three steps, no order summary until the last one, the 
 
 Claude: [Calls audit_interface with the description]
 Score 58, fair. Two warnings: Visibility of System Status (order summary hidden) and Silent Errors (disabled button without feedback). Priority fix: ...
+```
+
+After building a screen:
+
+```
+You: Build the settings page: profile form, an AI summary of recent activity, and a danger zone with "Delete account". Then check it.
+
+Claude: [Builds the page, then calls check_requirements with flow "settings", the components, the actions (Delete account flagged consequential) and the states it implemented]
+3 of 6 applicable rules fail: undo-or-edit (User Control and Freedom, Nielsen 1994), show-sources (AI Source Citations, Liu et al. 2023), ai-error-recovery (Efficient AI Correction, Amershi et al. 2019). Adding an undo toast, a sources line under the summary and a regenerate control...
 ```
 
 ## Bilingual support

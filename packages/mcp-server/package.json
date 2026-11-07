@@ -1,0 +1,68 @@
+{
+  "name": "@uxuiprinciples/mcp-server",
+  "version": "1.2.0",
+  "mcpName": "io.github.joselhurtado/uxui-principles",
+  "description": "MCP server for UX/UI Principles - 195 research-backed principles with citations, 12 UX smells, 12 flow checklists, and a pro mode (Principles Library API key) that adds full guides, AI prompts and interface audits. For Claude Code, Claude Desktop, Cursor, VS Code and Windsurf.",
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://uxuiprinciples.com",
+  "bugs": {
+    "url": "https://github.com/joselhurtado/uxuiprinciples-web/issues"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "uxui-mcp": "dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts src/tools/smell-keywords.ts --format cjs,esm --dts --clean --env.MCP_SERVER_VERSION \"$npm_package_version\"",
+    "dev": "tsup src/index.ts src/tools/smell-keywords.ts --format cjs,esm --dts --watch --env.MCP_SERVER_VERSION \"$npm_package_version\"",
+    "prepack": "npm run build -w @uxuiprinciples/principles-data && npm run build && node scripts/smoke-test.mjs",
+    "smoke-test": "node scripts/smoke-test.mjs",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "anthropic",
+    "ux",
+    "ui",
+    "principles",
+    "ai",
+    "agentic"
+  ],
+  "author": "UX/UI Principles <hello@uxuiprinciples.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uxuiprinciples/mcp-server.git",
+    "directory": "packages/mcp-server"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@uxuiprinciples/principles-data": "*",
+    "tsup": "^8.5.1",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.25 || ^4.0"
+  }
+}

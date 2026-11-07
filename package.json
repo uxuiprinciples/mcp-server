@@ -1,0 +1,18 @@
+{
+  "name": "uxui-principles-mcp-mirror",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Public mirror of the UX/UI Principles MCP server and its data package. Source of truth: joselhurtado/uxuiprinciples-web (private).",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @uxuiprinciples/principles-data && npm run build -w @uxuiprinciples/mcp-server",
+    "smoke-test": "npm run smoke-test -w @uxuiprinciples/mcp-server",
+    "start": "node packages/mcp-server/dist/index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}

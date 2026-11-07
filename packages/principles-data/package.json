@@ -1,0 +1,48 @@
+{
+  "name": "@uxuiprinciples/principles-data",
+  "version": "1.1.7",
+  "description": "Data layer for UX/UI Principles - the full research-backed principle taxonomy (metadata), UX smells, and flow checklists.",
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://uxuiprinciples.com",
+  "bugs": {
+    "url": "https://github.com/joselhurtado/uxuiprinciples-web/issues"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean --env.PRINCIPLES_DATA_VERSION \"$npm_package_version\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "ux",
+    "ui",
+    "principles",
+    "design",
+    "heuristics",
+    "accessibility"
+  ],
+  "author": "UX/UI Principles <hello@uxuiprinciples.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uxuiprinciples/mcp-server.git",
+    "directory": "packages/principles-data"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.0.0"
+  }
+}

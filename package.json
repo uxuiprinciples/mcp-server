@@ -1,6 +1,6 @@
 {
   "name": "uxui-principles-mcp-mirror",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "Public mirror of the UX/UI Principles MCP server and its data package. Source of truth: joselhurtado/uxuiprinciples-web (private).",
   "workspaces": [

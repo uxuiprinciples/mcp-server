@@ -103,102 +103,107 @@ const server = new Server(
 // TOOL DEFINITIONS
 // =============================================================================
 
+const LOCALE_PARAM = {
+  type: 'string',
+  enum: ['en', 'es'],
+  default: 'en',
+  description: 'Language of the returned content: "en" (English) or "es" (Spanish). Defaults to "en".'
+};
+
+// Every tool is read-only and idempotent. openWorldHint marks the tools that
+// reach the uxuiprinciples.com API when UXUI_API_KEY is set; the rest answer
+// from the bundled dataset and never touch the network.
+const OFFLINE = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+const PRO_AWARE = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: PRO_MODE };
+
 const TOOLS = [
   // Principle tools
   {
     name: 'get_principle',
-    description: `Get a UX/UI principle by its slug: metadata, summary, the bibliographic citations behind it (author, title, year, url) and a link to the full research-backed guide on uxuiprinciples.com. With ${API_KEY_ENV} set (pro mode) the full guide body comes back in \`content\`. Use this to identify, summarize or cite a specific principle.`,
+    title: 'Get a principle',
+    description: `Get one UX/UI principle by slug: title, code, part, difficulty, summary, the bibliographic citations behind it (author, title, year, url) and the link to the full guide on uxuiprinciples.com. With ${API_KEY_ENV} set (pro mode) the full guide body comes back in \`content\`. Use it to identify, summarize or cite a specific principle; use search_principles first when you only have a topic.`,
+    annotations: PRO_AWARE,
     inputSchema: {
       type: 'object' as const,
       properties: {
         slug: {
           type: 'string',
-          description: 'The principle slug (e.g., "cognitive-load", "hicks-law", "fitts-law")'
+          description: 'The principle slug as returned by search_principles or list_principles (e.g., "cognitive-load", "hicks-law", "fitts-law").'
         },
-        locale: {
-          type: 'string',
-          enum: ['en', 'es'],
-          default: 'en',
-          description: 'Language for the content'
-        }
+        locale: LOCALE_PARAM
       },
       required: ['slug']
     }
   },
   {
     name: 'search_principles',
-    description: 'Search UX/UI principles by query, part, difficulty, or tags. Returns matching principles with summaries.',
+    title: 'Search principles',
+    description: `Search the ${PRINCIPLE_COUNT} UX/UI principles by free text, part, difficulty or tags. Returns the matching principles with slug, title, code, part name and summary, plus the total count. Use it to find which principles apply to a design question before calling get_principle.`,
+    annotations: OFFLINE,
     inputSchema: {
       type: 'object' as const,
       properties: {
         query: {
           type: 'string',
-          description: 'Search query (searches title, slug, summary, and tags)'
+          description: 'Free-text query matched against title, slug, summary and tags (e.g., "form validation", "loading states", "choice overload").'
         },
         part: {
           type: 'string',
-          description: 'Filter by part (e.g., "part-1", "Foundations")'
+          description: 'Restrict to one part of the catalogue, by id or name (e.g., "part-1", "Foundations"). Call list_principles to see the parts.'
         },
         difficulty: {
           type: 'string',
           enum: ['beginner', 'intermediate', 'advanced'],
-          description: 'Filter by difficulty level'
+          description: 'Restrict to one difficulty level.'
         },
         tags: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Filter by tags'
+          description: 'Restrict to principles carrying every listed tag (e.g., ["forms", "errors"]).'
         },
-        locale: {
-          type: 'string',
-          enum: ['en', 'es'],
-          default: 'en'
-        },
+        locale: LOCALE_PARAM,
         limit: {
           type: 'number',
           default: 10,
-          description: 'Maximum results to return'
+          description: 'Maximum number of principles to return. Defaults to 10.'
         }
       }
     }
   },
   {
     name: 'list_principles',
-    description: 'List all UX/UI principles or filter by part. Returns principle summaries and available parts.',
+    title: 'List principles',
+    description: `List the ${PRINCIPLE_COUNT} UX/UI principles, optionally one part at a time. Returns principle summaries (slug, title, code, part name, summary), the total count and the list of part ids. Use it to browse the catalogue or to learn the part ids for search_principles.`,
+    annotations: OFFLINE,
     inputSchema: {
       type: 'object' as const,
       properties: {
         part: {
           type: 'string',
-          description: 'Filter by part name or ID'
+          description: 'Restrict to one part, by id or name (e.g., "part-1", "part-2"). Omit for every part.'
         },
-        locale: {
-          type: 'string',
-          enum: ['en', 'es'],
-          default: 'en'
-        },
+        locale: LOCALE_PARAM,
         limit: {
           type: 'number',
-          default: 20
+          default: 20,
+          description: 'Maximum number of principles to return. Defaults to 20.'
         }
       }
     }
   },
   {
     name: 'get_principle_prompts',
-    description: `Get the AI prompts for a specific principle. With ${API_KEY_ENV} set (pro mode) the prompt texts come back in \`prompts\`; without it the prompts belong to the paid Principles Library and the tool returns the URL of the guide. Call get_principle first if you only need the summary.`,
+    title: 'Get the AI prompts of a principle',
+    description: `Get the ready-to-use AI prompts attached to one principle (prompts to apply, audit or refactor an interface against it). With ${API_KEY_ENV} set (pro mode) the prompt texts come back in \`prompts\`; without it the prompts belong to the paid Principles Library and the tool returns the count and the URL of the guide. Call get_principle first if you only need the summary.`,
+    annotations: PRO_AWARE,
     inputSchema: {
       type: 'object' as const,
       properties: {
         slug: {
           type: 'string',
-          description: 'The principle slug'
+          description: 'The principle slug (e.g., "cognitive-load").'
         },
-        locale: {
-          type: 'string',
-          enum: ['en', 'es'],
-          default: 'en'
-        }
+        locale: LOCALE_PARAM
       },
       required: ['slug']
     }
@@ -207,79 +212,71 @@ const TOOLS = [
   // Smell tools
   {
     name: 'get_smell',
-    description: 'Get a UX smell (anti-pattern) by ID with symptoms, fix recipe, and related prompts.',
+    title: 'Get a UX smell',
+    description: `Get one UX smell (interface anti-pattern) by id: name, tagline, symptoms, the Nielsen heuristic it breaks, a step-by-step fix recipe with a time estimate, the related principles and an audit prompt plus a refactoring prompt. Use it once you know the smell id, from list_smells or detect_smell.`,
+    annotations: OFFLINE,
     inputSchema: {
       type: 'object' as const,
       properties: {
         id: {
           type: 'string',
-          description: 'The smell ID (e.g., "overloaded-screen", "form-graveyard")'
+          description: 'The smell id (e.g., "overloaded-screen", "form-graveyard", "silent-errors", "ai-gradient-cliche"). Call list_smells for the full set.'
         },
-        locale: {
-          type: 'string',
-          enum: ['en', 'es'],
-          default: 'en'
-        }
+        locale: LOCALE_PARAM
       },
       required: ['id']
     }
   },
   {
     name: 'list_smells',
-    description: 'List all UX smells (anti-patterns) optionally filtered by category.',
+    title: 'List UX smells',
+    description: `List the ${SMELL_COUNT} UX smells (interface anti-patterns such as overloaded screens, form graveyards, silent errors or the AI-aesthetic cliches), optionally filtered by category. Returns id, name, short name, tagline, category and Nielsen heuristic for each. Use it to browse the catalogue before get_smell.`,
+    annotations: OFFLINE,
     inputSchema: {
       type: 'object' as const,
       properties: {
         category: {
           type: 'string',
-          description: 'Filter by category (e.g., "efficiency", "usability")'
+          description: 'Restrict to one category (e.g., "efficiency", "feedback", "error-prevention", "accessibility", "ai-aesthetic"). Omit for every smell.'
         },
-        locale: {
-          type: 'string',
-          enum: ['en', 'es'],
-          default: 'en'
-        }
+        locale: LOCALE_PARAM
       }
     }
   },
   {
     name: 'detect_smell',
-    description: 'Detect potential UX smells based on a description of UI issues. Returns matched smells with confidence levels and suggested fixes.',
+    title: 'Detect UX smells from a description',
+    description: 'Detect which UX smells match a plain-language description of an interface problem or a user complaint, in English or Spanish. Returns the matched smells with a confidence level and the suggested fix for each. Use it as the first step when a UI "feels off" and the cause is not named yet; runs offline.',
+    annotations: OFFLINE,
     inputSchema: {
       type: 'object' as const,
       properties: {
         description: {
           type: 'string',
-          description: 'Description of the UI issue or user complaint (e.g., "users say the dashboard is too cluttered and they don\'t know where to start")'
+          description: 'What is wrong, in the user\'s or the team\'s words (e.g., "users say the dashboard is too cluttered and they don\'t know where to start", "el formulario es demasiado largo").'
         },
-        locale: {
-          type: 'string',
-          enum: ['en', 'es'],
-          default: 'en'
-        }
+        locale: LOCALE_PARAM
       },
       required: ['description']
     }
   },
   {
     name: 'suggest_fix',
-    description: 'Get a fix suggestion for a UX issue. Detects the smell and provides step-by-step fix recipe with a refactoring prompt.',
+    title: 'Suggest a fix for a UX issue',
+    description: 'Get a fix for a described UX issue: detects the most likely smell (or uses the one you pass), then returns its step-by-step fix recipe, the principles to apply and a refactoring prompt you can hand to a coding agent. Use it when you want an actionable remedy rather than a diagnosis; runs offline.',
+    annotations: OFFLINE,
     inputSchema: {
       type: 'object' as const,
       properties: {
         issue: {
           type: 'string',
-          description: 'Description of the UX issue to fix'
+          description: 'The UX issue to fix, in plain language (e.g., "the checkout asks for account creation before showing the price").'
         },
         smell_id: {
           type: 'string',
-          description: 'Optional: specific smell ID if already known'
+          description: 'Optional smell id to skip detection when the smell is already known (e.g., "dead-end-states").'
         },
-        locale: {
-          type: 'string',
-          enum: ['en', 'es'],
-          default: 'en'
-        }
+        locale: LOCALE_PARAM
       },
       required: ['issue']
     }
@@ -288,76 +285,68 @@ const TOOLS = [
   // Flow tools
   {
     name: 'get_flow',
-    description: 'Get a user flow with pre-flight and post-flight checklists. Use before designing or shipping a flow.',
+    title: 'Get a user flow',
+    description: 'Get one user flow (onboarding, forms, pricing, dashboard, checkout, search, authentication and more) with its target metrics, the pre-flight checklist to run before designing it and the post-flight checklist to run before shipping it. Use it before designing or shipping a known flow.',
+    annotations: OFFLINE,
     inputSchema: {
       type: 'object' as const,
       properties: {
         id: {
           type: 'string',
-          description: `The flow ID. One of: ${FLOW_IDS}. Call list_flows for the current set.`
+          description: `The flow id. One of: ${FLOW_IDS}. Call list_flows for the current set.`
         },
-        locale: {
-          type: 'string',
-          enum: ['en', 'es'],
-          default: 'en'
-        }
+        locale: LOCALE_PARAM
       },
       required: ['id']
     }
   },
   {
     name: 'list_flows',
-    description: 'List all available user flows with their target metrics.',
+    title: 'List user flows',
+    description: `List the ${FLOW_COUNT} user flows covered by the checklists (onboarding, forms, pricing, dashboard, empty states, checkout, settings, navigation, search, authentication, notifications, data tables) with the target metric of each. Returns id, name, description, metric target and the number of checklist items per phase. Use it to pick the id for get_flow, generate_checklist or get_flow_principles.`,
+    annotations: OFFLINE,
     inputSchema: {
       type: 'object' as const,
       properties: {
-        locale: {
-          type: 'string',
-          enum: ['en', 'es'],
-          default: 'en'
-        }
+        locale: LOCALE_PARAM
       }
     }
   },
   {
     name: 'generate_checklist',
-    description: 'Generate a pre-flight or post-flight checklist for a specific flow. Returns both structured data and markdown.',
+    title: 'Generate a flow checklist',
+    description: 'Generate the pre-flight (before design) or post-flight (before ship) checklist for one user flow. Returns the checklist as structured items (each tied to a principle) and as ready-to-paste markdown. Use it to review a design or a pull request against the flow it implements.',
+    annotations: OFFLINE,
     inputSchema: {
       type: 'object' as const,
       properties: {
         flow_id: {
           type: 'string',
-          description: 'The flow ID'
+          description: `The flow id. One of: ${FLOW_IDS}. Call list_flows for the current set.`
         },
         phase: {
           type: 'string',
           enum: ['preflight', 'postflight'],
-          description: 'Which checklist to generate: preflight (before design) or postflight (before ship)'
+          description: 'Which checklist to generate: "preflight" (before design) or "postflight" (before ship).'
         },
-        locale: {
-          type: 'string',
-          enum: ['en', 'es'],
-          default: 'en'
-        }
+        locale: LOCALE_PARAM
       },
       required: ['flow_id', 'phase']
     }
   },
   {
     name: 'get_flow_principles',
-    description: 'Get the key principles and common smells for a specific flow.',
+    title: 'Get the principles behind a flow',
+    description: 'Get the key principles that govern one user flow and the UX smells that most often break it. Returns the principle slugs and the smell ids so you can read them with get_principle and get_smell. Use it to ground a flow review in evidence.',
+    annotations: OFFLINE,
     inputSchema: {
       type: 'object' as const,
       properties: {
         flow_id: {
           type: 'string',
-          description: `The flow ID. One of: ${FLOW_IDS}.`
+          description: `The flow id. One of: ${FLOW_IDS}.`
         },
-        locale: {
-          type: 'string',
-          enum: ['en', 'es'],
-          default: 'en'
-        }
+        locale: LOCALE_PARAM
       },
       required: ['flow_id']
     }
@@ -366,7 +355,9 @@ const TOOLS = [
   // Pro tools (uxuiprinciples.com API, need UXUI_API_KEY)
   {
     name: 'audit_interface',
+    title: 'Audit an interface',
     description: `Audit a described screen or flow: returns findings mapped to principles and UX smells, each with severity, remediation and business impact, plus a score, the detected interface type, strengths and the three priority fixes. Pro mode only (${API_KEY_ENV} set): the audit runs on the uxuiprinciples.com API. Without a key use detect_smell then suggest_fix, which run offline.`,
+    annotations: PRO_AWARE,
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -375,10 +366,8 @@ const TOOLS = [
           description: `What the screen shows and what users do or complain about, ${AUDIT_MIN_CHARS} to ${AUDIT_MAX_CHARS} characters. Name the components, the actions and the states you implemented (loading, empty, error, confirmation).`
         },
         locale: {
-          type: 'string',
-          enum: ['en', 'es'],
-          default: 'en',
-          description: 'Language of the findings'
+          ...LOCALE_PARAM,
+          description: 'Language of the findings: "en" or "es". Defaults to "en".'
         },
         context: {
           type: 'string',
@@ -389,7 +378,7 @@ const TOOLS = [
           type: 'string',
           enum: ['quick', 'full'],
           default: 'full',
-          description: 'quick: top 5 findings. full: every finding.'
+          description: '"quick": the top 5 findings. "full": every finding. Defaults to "full".'
         }
       },
       required: ['description']
@@ -446,10 +435,8 @@ const TOOL_SCHEMAS: Record<string, z.ZodType> = {
 // REQUEST HANDLERS
 // =============================================================================
 
-// List available tools. Every tool is read-only (no side effects).
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: TOOLS.map(tool => ({ ...tool, annotations: { readOnlyHint: true } }))
-}));
+// List available tools. Titles and annotations are declared per tool above.
+server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
 // Handle tool calls
 server.setRequestHandler(CallToolRequestSchema, async (request) => {

@@ -10,7 +10,7 @@ claude mcp add uxui-principles -- npx -y @uxuiprinciples/mcp-server
 
 ## About this repository
 
-This is a read-only mirror. The code is developed in a private monorepo and pushed here by a workflow on every release tag, so pull requests cannot be merged; issues are welcome and get answered. The dataset in `packages/principles-data/src/generated/dataset.ts` is the same public catalogue (metadata, summaries, citations) that ships in the npm package; the full guides and the AI prompts stay in the [Principles Library](https://uxuiprinciples.com/en/developers).
+This is a read-only mirror. The code is developed in a private monorepo and pushed here by a workflow on every change to the packages and on every release tag (which also cuts a GitHub release here), so pull requests cannot be merged; issues are welcome and get answered. The dataset in `packages/principles-data/src/generated/dataset.ts` is the same public catalogue (metadata, summaries, citations) that ships in the npm package; the full guides and the AI prompts stay in the [Principles Library](https://uxuiprinciples.com/en/developers).
 
 ## Run from source
 

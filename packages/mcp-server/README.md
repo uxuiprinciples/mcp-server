@@ -6,7 +6,7 @@ Free and offline by default: the dataset ships inside the package and the server
 
 ## What is MCP?
 
-[Model Context Protocol (MCP)](https://modelcontextprotocol.io) is an open protocol that lets an AI assistant call external tools. This server speaks MCP over stdio and registers 13 tools.
+[Model Context Protocol (MCP)](https://modelcontextprotocol.io) is an open protocol that lets an AI assistant call external tools. This server speaks MCP over stdio and registers 14 tools.
 
 ## Installation
 

@@ -7,7 +7,7 @@
   },
   "homepage": "https://uxuiprinciples.com",
   "bugs": {
-    "url": "https://github.com/joselhurtado/uxuiprinciples-web/issues"
+    "url": "https://github.com/uxuiprinciples/mcp-server/issues"
   },
   "main": "dist/index.js",
   "module": "dist/index.mjs",

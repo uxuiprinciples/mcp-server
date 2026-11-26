@@ -224,11 +224,10 @@ detect_smell({ description: "el formulario es demasiado largo", locale: "es" })
 ## Local development
 
 ```bash
-git clone https://github.com/joselhurtado/uxuiprinciples-web.git
-cd uxuiprinciples-web
+git clone https://github.com/uxuiprinciples/mcp-server.git
+cd mcp-server
 npm install
-npm run build --workspace=@uxuiprinciples/principles-data
-npm run build --workspace=@uxuiprinciples/mcp-server
+npm run build
 node packages/mcp-server/dist/index.js
 ```
 

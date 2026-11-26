@@ -25,10 +25,10 @@ import {
 // Get all principles (metadata only)
 const principles = loadPrinciples('en'); // or 'es' for Spanish
 
-// Get a specific principle with full content
+// One principle: metadata, summary and a link to the full guide
 const cognitiveLoad = getPrinciple('cognitive-load', 'en');
-console.log(cognitiveLoad?.title); // "Cognitive Load Theory"
-console.log(cognitiveLoad?.content); // MDX content
+console.log(cognitiveLoad?.title); // "Cognitive Load"
+console.log(cognitiveLoad?.content); // summary + link to the full guide (full bodies are not bundled)
 
 // Search principles
 const results = searchPrinciples({
@@ -99,30 +99,12 @@ import type {
 | Flows | 12 | User journey checklists |
 | Locales | 2 | English and Spanish |
 
-The numbers in this table are kept in step with the source files by `scripts/sync-content-counts.js` in the repository root (`npm run validate:counts`); `PRINCIPLE_COUNT`, `SMELL_COUNT` and `FLOW_COUNT` in `src/index.ts` are derived from the compiled data at build time.
+The dataset is generated in a private monorepo; this package ships it as compiled data. `PRINCIPLE_COUNT`, `SMELL_COUNT` and `FLOW_COUNT` in `src/index.ts` are derived from the compiled data at build time.
 
-## For Package Development
-
-### Compile Data
-
-After modifying data in the site's `src/data/` or `src/content/`, run:
-
-```bash
-npm run compile-data
-```
-
-This copies the JSON data and the MDX content into `content/` and `data/` for the build (`npm run build` runs it first).
-
-### Build
+## Build
 
 ```bash
 npm run build
-```
-
-### Development
-
-```bash
-npm run dev  # Watch mode
 ```
 
 ## License
